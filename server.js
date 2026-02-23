@@ -38,6 +38,75 @@ function normalizeOrderStatus(status) {
 
 async function initializeDatabase() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      price NUMERIC(10,2) DEFAULT 0,
+      quantity_grams INTEGER DEFAULT 250,
+      stock INTEGER DEFAULT 0,
+      cost_price NUMERIC(10,2) DEFAULT 0,
+      selling_price NUMERIC(10,2) DEFAULT 0,
+      image TEXT,
+      description TEXT,
+      ingredients TEXT,
+      discount_percent NUMERIC(5,2) DEFAULT 0,
+      brand_name TEXT,
+      offer_text TEXT,
+      region_of_origin TEXT,
+      net_quantity TEXT,
+      items_per_pack INTEGER DEFAULT 1,
+      item_part_number TEXT,
+      mrp NUMERIC(10,2),
+      logo_image TEXT
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      address TEXT NOT NULL,
+      total NUMERIC(10,2) DEFAULT 0,
+      payment_status TEXT DEFAULT 'Paid',
+      order_status TEXT DEFAULT 'Order Received',
+      created_at TIMESTAMP DEFAULT NOW(),
+      payment_method TEXT DEFAULT 'online',
+      order_source TEXT DEFAULT 'website',
+      live_location_url TEXT,
+      live_latitude NUMERIC(10,7),
+      live_longitude NUMERIC(10,7),
+      order_pdf_url TEXT
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      unit_price NUMERIC(10,2) DEFAULT 0,
+      weight_option TEXT
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    INSERT INTO admin (username, password)
+    SELECT 'admin', 'admin123'
+    WHERE NOT EXISTS (SELECT 1 FROM admin)
+  `);
+
+  await pool.query(`
     ALTER TABLE products
     ADD COLUMN IF NOT EXISTS description TEXT
   `);
