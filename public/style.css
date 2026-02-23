@@ -125,6 +125,13 @@ body {
   margin-bottom: 14px;
 }
 
+.shop-tagline {
+  font-size: clamp(17px, 1.6vw, 24px);
+  font-weight: 700;
+  color: #1f2b41;
+  margin: 6px 0 18px;
+}
+
 .hero-text {
   font-size: clamp(16px, 1.45vw, 22px);
   color: var(--muted);
