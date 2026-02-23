@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cart</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="topbar">
+      <h1 class="brand">Your Cart</h1>
+      <div class="menu">
+        <a href="/shop">Shop</a>
+        <a href="/order-tracking">Track Order</a>
+      </div>
+    </nav>
+
+    <% if (!cart || cart.length === 0) { %>
+      <section class="panel">
+        <h2>Cart is empty</h2>
+        <p class="muted">Add products from shop to place order.</p>
+        <a class="btn" href="/shop">Continue Shopping</a>
+      </section>
+    <% } else { %>
+      <section class="panel table-wrap">
+        <table>
+          <tr>
+            <th>Product</th>
+            <th>Weight</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th>Subtotal</th>
+          </tr>
+
+          <% cart.forEach(item => { %>
+            <% const unitPrice = Number(item.unitPrice || item.product.price || item.product.selling_price || 0); %>
+            <% const subtotal = unitPrice * item.quantity; %>
+            <tr>
+              <td><%= item.product.name %></td>
+              <td><%= item.weightOption || '250g' %></td>
+              <td><%= item.quantity %></td>
+              <td>Rs. <%= unitPrice %></td>
+              <td>Rs. <%= subtotal %></td>
+            </tr>
+          <% }) %>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Order Summary</h2>
+        <p>Subtotal: <strong>Rs. <%= pricing.subtotal %></strong></p>
+        <p>Delivery: <strong>Rs. <%= pricing.deliveryCharge %></strong> <span class="muted">
+          (<% if (storeSettings && storeSettings.freeDeliveryAbove !== null) { %>Free above Rs. <%= storeSettings.freeDeliveryAbove %><% } else { %>Always charged as configured by admin<% } %>)
+        </span></p>
+        <p class="price-tag">Payable Total: Rs. <%= pricing.total %></p>
+      </section>
+
+      <section class="panel">
+        <h2>Order via WhatsApp</h2>
+        <form class="stack" id="cartWhatsappOrderForm" action="/place-order" method="POST">
+          <input type="hidden" name="payment_method" value="cod">
+          <input type="hidden" name="order_source" value="whatsapp">
+          <div class="grid-2">
+            <div>
+              <label>Name</label>
+              <input type="text" name="name" id="cartName" placeholder="Your Name" required>
+            </div>
+            <div>
+              <label>Phone</label>
+              <input type="text" name="phone" id="cartPhone" placeholder="Phone Number" required>
+            </div>
+          </div>
+
+          <div>
+            <label>Address</label>
+            <textarea name="address" id="cartAddress" placeholder="Delivery Address" required></textarea>
+          </div>
+
+          <div class="live-location-wrap">
+            <label><strong>Live Location (Optional)</strong></label>
+            <div class="form-actions">
+              <button type="button" id="cartDetectLocation">Use Live Location</button>
+            </div>
+            <input type="hidden" name="live_latitude" id="cartLiveLatitude">
+            <input type="hidden" name="live_longitude" id="cartLiveLongitude">
+            <input type="text" name="live_location_url" id="cartLiveLocationUrl" placeholder="Location link auto-filled or paste Google Maps URL">
+            <p class="muted" id="cartLocationStatus"></p>
+          </div>
+
+          <div class="form-actions">
+            <% if (adminWhatsAppNumber) { %>
+              <button type="submit" class="btn btn-whatsapp" id="cartWhatsappOrderBtn">Order via WhatsApp</button>
+            <% } %>
+            <a class="btn btn-secondary" href="/order-tracking">Track Existing Order</a>
+          </div>
+        </form>
+      </section>
+    <% } %>
+  </div>
+
+  <% if (adminWhatsAppNumber) { %>
+    <a
+      class="floating-whatsapp"
+      href="https://wa.me/<%= adminWhatsAppNumber %>?text=<%= encodeURIComponent('Hello, I want help with my order in cart') %>"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.52 2 2.04 6.48 2.04 12c0 1.77.46 3.51 1.33 5.04L2 22l5.11-1.34A9.96 9.96 0 0 0 12.04 22C17.56 22 22.04 17.52 22.04 12S17.56 2 12.04 2zm0 18.2c-1.53 0-3.03-.4-4.34-1.16l-.31-.18-3.03.8.81-2.95-.2-.31a8.16 8.16 0 0 1-1.25-4.4 8.32 8.32 0 1 1 8.32 8.2zm4.56-6.12c-.25-.12-1.48-.73-1.71-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.98-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.25-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.1-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.41-.56-.42h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.25 1.05.4 1.41.52.59.19 1.12.16 1.54.1.47-.07 1.48-.6 1.69-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.29z"></path></svg>
+    </a>
+  <% } %>
+</body>
+<script>
+  (function () {
+    const btn = document.getElementById("cartDetectLocation");
+    const form = document.getElementById("cartWhatsappOrderForm");
+    const nameInput = document.getElementById("cartName");
+    const phoneInput = document.getElementById("cartPhone");
+    const addressInput = document.getElementById("cartAddress");
+    if (!btn) return;
+    const lat = document.getElementById("cartLiveLatitude");
+    const lng = document.getElementById("cartLiveLongitude");
+    const url = document.getElementById("cartLiveLocationUrl");
+    const status = document.getElementById("cartLocationStatus");
+
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        if (!nameInput.value.trim() || !phoneInput.value.trim() || !addressInput.value.trim()) {
+          e.preventDefault();
+          status.textContent = "Please enter name, phone and address before ordering on WhatsApp.";
+        }
+      });
+    }
+
+    btn.addEventListener("click", function () {
+      if (!navigator.geolocation) {
+        status.textContent = "Geolocation is not supported on this device.";
+        return;
+      }
+      status.textContent = "Fetching location...";
+      navigator.geolocation.getCurrentPosition(function (position) {
+        const latitude = position.coords.latitude.toFixed(7);
+        const longitude = position.coords.longitude.toFixed(7);
+        lat.value = latitude;
+        lng.value = longitude;
+        url.value = `https://maps.google.com/?q=${latitude},${longitude}`;
+        status.textContent = "Live location captured.";
+      }, function () {
+        status.textContent = "Unable to get live location. You can paste map link manually.";
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+  })();
+</script>
+</html>

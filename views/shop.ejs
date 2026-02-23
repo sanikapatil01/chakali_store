@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Shop - Chakali Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="topbar">
+      <div class="logo-side">
+        <div class="chakali-logo"><span>C</span></div>
+        <h1 class="brand">Chakali Store</h1>
+      </div>
+      <div class="menu">
+        <a href="/admin/login">Admin Login</a>
+      </div>
+    </nav>
+
+    <section class="products-section" id="productGrid">
+      <h2>Our Products</h2>
+      <div class="product-grid">
+        <% products.forEach(product => { %>
+          <% 
+            const wp = (weightPricesByProduct && weightPricesByProduct[product.id]) ? weightPricesByProduct[product.id] : {};
+            const base = Number(product.price || product.selling_price || 0);
+            const fallback = {100: Math.round(base * 0.45), 250: base, 500: Math.round(base * 1.9), 750: Math.round(base * 2.8), 1000: Math.round(base * 3.6)};
+            const optionList = (weightOptions || [100,250,500,750,1000]).map(function(g){ return { grams: g, price: wp[g] !== undefined ? Number(wp[g]) : fallback[g] }; });
+            const fixedOpt = optionList.find(o => o.grams === 500) || optionList[0];
+            const discountPercent = Math.max(0, Math.min(95, Number(product.discount_percent || 0)));
+            const discountedPrice = Math.round(fixedOpt.price * (1 - discountPercent / 100));
+          %>
+          <article class="card">
+            <% if (discountPercent > 0) { %>
+              <span class="discount-badge"><%= discountPercent %>% OFF</span>
+            <% } %>
+            <% if (product.image) { %>
+              <a href="/product/<%= product.id %>" aria-label="View <%= product.name %> details">
+                <img src="/uploads/<%= product.image %>" alt="<%= product.name %>">
+              </a>
+            <% } else { %>
+              <a href="/product/<%= product.id %>" aria-label="View <%= product.name %> details">
+                <div class="image-box">No Image</div>
+              </a>
+            <% } %>
+
+            <div class="title-row">
+              <h3><a href="/product/<%= product.id %>"><%= product.name %></a></h3>
+              <span class="price-tag">
+                Rs. <%= discountPercent > 0 ? discountedPrice : fixedOpt.price %> (500g)
+                <% if (discountPercent > 0) { %>
+                  <small class="old-price">Rs. <%= fixedOpt.price %></small>
+                <% } %>
+              </span>
+            </div>
+
+            <p class="muted"><%= product.category || "Snacks" %></p>
+
+            <form action="/add-to-cart" method="POST" class="stack">
+              <input type="hidden" name="productId" value="<%= product.id %>">
+              <input type="hidden" name="unitPrice" value="<%= discountPercent > 0 ? discountedPrice : fixedOpt.price %>">
+              <input type="hidden" name="weightOption" value="500g">
+              <label>Quantity (500g Pack)</label>
+              <input type="number" name="quantity" value="1" min="1" required>
+              <button type="submit">Add to Cart</button>
+            </form>
+
+            <div class="form-actions">
+              <% if (adminWhatsAppNumber) { %>
+                <a
+                  class="btn btn-whatsapp"
+                  href="/product/<%= product.id %>#whatsappOrderForm"
+                >Order via WhatsApp</a>
+              <% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="shop-cta">
+      <h2>Ready to taste tradition?</h2>
+      <p>Order now and get fresh, homemade chakali delivered to your doorstep</p>
+      <a class="btn cta-button" href="/cart">Start Shopping</a>
+    </section>
+
+    <footer class="site-footer">
+      <div class="footer-block brand-block">
+        <div class="logo-side">
+          <div class="chakali-logo"><span>C</span></div>
+          <h3>Chakali Store</h3>
+        </div>
+        <p>Bringing the taste of tradition to every home since years.</p>
+      </div>
+
+      <div class="footer-block">
+        <h4>Quick Links</h4>
+        <a href="/shop">Shop</a>
+        <a href="/">About Us</a>
+        <a href="/">Contact</a>
+      </div>
+
+      <div class="footer-block">
+        <h4>Contact Us</h4>
+        <p><%= adminWhatsAppNumber || '+91 1234567890' %></p>
+        <p>Order via WhatsApp for quick service</p>
+      </div>
+
+      <div class="footer-bottom">&copy; 2026 Chakali Store. All rights reserved.</div>
+    </footer>
+  </div>
+
+  <% if (adminWhatsAppNumber) { %>
+    <a
+      class="floating-whatsapp"
+      href="https://wa.me/<%= String(adminWhatsAppNumber).replace(/[^\d]/g, '') %>?text=<%= encodeURIComponent('Hello, I need quick order help') %>"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.52 2 2.04 6.48 2.04 12c0 1.77.46 3.51 1.33 5.04L2 22l5.11-1.34A9.96 9.96 0 0 0 12.04 22C17.56 22 22.04 17.52 22.04 12S17.56 2 12.04 2zm0 18.2c-1.53 0-3.03-.4-4.34-1.16l-.31-.18-3.03.8.81-2.95-.2-.31a8.16 8.16 0 0 1-1.25-4.4 8.32 8.32 0 1 1 8.32 8.2zm4.56-6.12c-.25-.12-1.48-.73-1.71-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.98-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.25-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.1-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.41-.56-.42h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.25 1.05.4 1.41.52.59.19 1.12.16 1.54.1.47-.07 1.48-.6 1.69-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.29z"></path></svg>
+    </a>
+  <% } %>
+</body>
+</html>

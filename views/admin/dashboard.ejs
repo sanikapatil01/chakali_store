@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <%
+    const safeOrderStats = (typeof orderStats !== 'undefined' && orderStats) ? orderStats : { total_orders: 0, pending_orders: 0, current_orders: 0, completed_orders: 0 };
+    const safeDailyChartData = (typeof dailyChartData !== 'undefined' && Array.isArray(dailyChartData)) ? dailyChartData : [];
+    const safeWeightOptions = (typeof weightOptions !== 'undefined' && Array.isArray(weightOptions)) ? weightOptions : [100, 250, 500, 750, 1000];
+    const safeWeightPricesByProduct = (typeof weightPricesByProduct !== 'undefined' && weightPricesByProduct) ? weightPricesByProduct : {};
+    const safeWhatsAppStatus = (typeof whatsAppStatus !== 'undefined' && whatsAppStatus) ? whatsAppStatus : { configured: false, missing: [] };
+    const safeTodayOrders = (typeof todayOrders !== 'undefined' && Array.isArray(todayOrders)) ? todayOrders : [];
+    const safeStoreSettings = (typeof storeSettings !== 'undefined' && storeSettings) ? storeSettings : { deliveryCharge: 40, freeDeliveryAbove: 499 };
+
+    function paymentClass(status) {
+      if (String(status || '').toLowerCase().includes('paid')) return 'pill-paid';
+      return 'pill-pending';
+    }
+
+    function orderClass(status) {
+      const s = String(status || '').toLowerCase();
+      if (s.includes('delivered')) return 'pill-delivered';
+      if (s.includes('shipped')) return 'pill-shipped';
+      if (s.includes('packed')) return 'pill-packed';
+      return 'pill-received';
+    }
+  %>
+
+  <div class="container admin-shell admin-v3">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">Admin Panel</div>
+      <nav class="admin-nav">
+        <a href="#overview">Overview</a>
+        <a href="#orders-today">Today Orders</a>
+        <a href="#orders-all">All Orders</a>
+        <a href="#products">Products</a>
+        <a href="/shop">Open Store</a>
+      </nav>
+      <div class="admin-metric-cards">
+        <div class="admin-metric"><span>Total Orders</span><strong><%= safeOrderStats.total_orders %></strong></div>
+        <div class="admin-metric"><span>Pending</span><strong class="text-warn"><%= safeOrderStats.pending_orders %></strong></div>
+        <div class="admin-metric"><span>Current</span><strong class="text-info"><%= safeOrderStats.current_orders %></strong></div>
+        <div class="admin-metric"><span>Completed</span><strong class="text-ok"><%= safeOrderStats.completed_orders %></strong></div>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <nav class="topbar admin-topbar admin-header-row">
+        <h1 class="brand">Admin Dashboard</h1>
+        <div class="admin-header-actions">
+          <button type="button" class="btn btn-primary btn-small" data-open-modal="add-product-modal">+ Add Product</button>
+          <a class="btn btn-secondary btn-small" href="/shop">Store</a>
+        </div>
+      </nav>
+
+      <section id="overview" class="stats admin-stats admin-stat-cards">
+        <article class="stat"><div><strong>Total Sales</strong><p>Rs. <%= totalSales %></p></div><span class="stat-icon blue">$</span></article>
+        <article class="stat"><div><strong>Total Orders</strong><p><%= totalOrders %></p></div><span class="stat-icon green">?</span></article>
+        <article class="stat"><div><strong>Total Profit</strong><p>Rs. <%= totalProfit %></p></div><span class="stat-icon violet">?</span></article>
+        <article class="stat"><div><strong>Best Selling</strong><p><%= bestSelling ? bestSelling.name : "N/A" %></p></div><span class="stat-icon orange">?</span></article>
+      </section>
+
+      <section class="panel admin-chart-panel">
+        <div class="panel-head">
+          <h3>Daily Sales & Profit (Last 14 Days)</h3>
+          <p class="muted">Track daily rupee performance quickly.</p>
+        </div>
+        <% const maxValue = Math.max(1, ...safeDailyChartData.map(d => Math.max(Number(d.sales || 0), Number(d.profit || 0)))); %>
+        <div class="sales-chart">
+          <% safeDailyChartData.forEach(day => { %>
+            <div class="sales-chart-day">
+              <div class="bars">
+                <div class="bar sale" style="height:<%= Math.max(6, Math.round((Number((day && day.sales) || 0) / maxValue) * 120)) %>px" title="Sales Rs. <%= Number((day && day.sales) || 0).toFixed(0) %>"></div>
+                <div class="bar profit" style="height:<%= Math.max(6, Math.round((Number((day && day.profit) || 0) / maxValue) * 120)) %>px" title="Profit Rs. <%= Number((day && day.profit) || 0).toFixed(0) %>"></div>
+              </div>
+              <span><%= (day && day.day ? String(day.day).slice(5, 10) : '--') %></span>
+            </div>
+          <% }) %>
+        </div>
+        <div class="chart-legend"><span><i class="sale"></i>Sales</span><span><i class="profit"></i>Profit</span></div>
+      </section>
+
+      <section class="panel" id="pricing-settings">
+        <h3>Pricing & Delivery Settings</h3>
+        <form action="/admin/settings/delivery" method="POST" class="grid-2">
+          <div>
+            <label>Delivery Charge</label>
+            <input type="number" name="delivery_charge" min="0" step="0.01" value="<%= safeStoreSettings.deliveryCharge %>" required>
+          </div>
+          <div>
+            <label>Free Delivery Above (Optional)</label>
+            <input type="number" name="free_delivery_above" min="0" step="0.01" value="<%= safeStoreSettings.freeDeliveryAbove !== null ? safeStoreSettings.freeDeliveryAbove : '' %>" placeholder="Leave blank to disable">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-small-inline">Save Delivery Rules</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel table-wrap" id="orders-today">
+        <div class="section-head">
+          <h3>Today's Orders</h3>
+          <div class="order-filter-buttons">
+            <button class="filter-btn active" data-target="today-orders-body" data-filter="all">All</button>
+            <button class="filter-btn" data-target="today-orders-body" data-filter="Order Received">Received</button>
+            <button class="filter-btn" data-target="today-orders-body" data-filter="Packed">Pending</button>
+            <button class="filter-btn" data-target="today-orders-body" data-filter="Delivered">Completed</button>
+          </div>
+        </div>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Location</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Method</th>
+              <th>Source</th>
+              <th>PDF</th>
+              <th>Status</th>
+              <th>Update</th>
+            </tr>
+          </thead>
+          <tbody id="today-orders-body">
+            <% safeTodayOrders.forEach(order => { %>
+              <tr data-order-status="<%= order.order_status %>">
+                <td>#<%= order.id %></td>
+                <td><%= order.customer_name %></td>
+                <td><%= order.phone %></td>
+                <td class="address-cell"><%= order.address %></td>
+                <td>
+                  <% if (order.live_location_url) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="<%= order.live_location_url %>" target="_blank" rel="noopener noreferrer">View Map</a>
+                  <% } else if (order.live_latitude && order.live_longitude) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="https://maps.google.com/?q=<%= order.live_latitude %>,<%= order.live_longitude %>" target="_blank" rel="noopener noreferrer">Coords</a>
+                  <% } else { %>
+                    <span class="muted">-</span>
+                  <% } %>
+                </td>
+                <td><strong>Rs. <%= order.total %></strong></td>
+                <td><span class="status-pill <%= paymentClass(order.payment_status) %>"><%= order.payment_status %></span></td>
+                <td><%= order.payment_method || '-' %></td>
+                <td><%= order.order_source || '-' %></td>
+                <td>
+                  <% if (order.order_pdf_url) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="<%= order.order_pdf_url %>" target="_blank" rel="noopener noreferrer">Open PDF</a>
+                  <% } else { %>
+                    <span class="muted">-</span>
+                  <% } %>
+                </td>
+                <td><span class="status-pill <%= orderClass(order.order_status) %>"><%= order.order_status %></span></td>
+                <td>
+                  <form action="/admin/update-order-status/<%= order.id %>" method="POST" class="form-actions compact-actions">
+                    <select name="order_status">
+                      <option value="Order Received" <%= order.order_status === 'Order Received' ? 'selected' : '' %>>Order Received</option>
+                      <option value="Packed" <%= order.order_status === 'Packed' ? 'selected' : '' %>>Packed</option>
+                      <option value="Shipped" <%= order.order_status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                      <option value="Delivered" <%= order.order_status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                    </select>
+                    <button type="submit" class="btn-small-inline">Save</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel table-wrap" id="orders-all">
+        <div class="section-head">
+          <h3>All Orders</h3>
+          <div class="order-filter-buttons">
+            <button class="filter-btn active" data-target="all-orders-body" data-filter="all">All</button>
+            <button class="filter-btn" data-target="all-orders-body" data-filter="Order Received">Received</button>
+            <button class="filter-btn" data-target="all-orders-body" data-filter="Packed">Pending</button>
+            <button class="filter-btn" data-target="all-orders-body" data-filter="Delivered">Completed</button>
+          </div>
+        </div>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Location</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Method</th>
+              <th>Source</th>
+              <th>PDF</th>
+              <th>Status</th>
+              <th>Update</th>
+            </tr>
+          </thead>
+          <tbody id="all-orders-body">
+            <% orders.forEach(order => { %>
+              <tr data-order-status="<%= order.order_status %>">
+                <td>#<%= order.id %></td>
+                <td><%= order.customer_name %></td>
+                <td><%= order.phone %></td>
+                <td class="address-cell"><%= order.address %></td>
+                <td>
+                  <% if (order.live_location_url) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="<%= order.live_location_url %>" target="_blank" rel="noopener noreferrer">View Map</a>
+                  <% } else if (order.live_latitude && order.live_longitude) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="https://maps.google.com/?q=<%= order.live_latitude %>,<%= order.live_longitude %>" target="_blank" rel="noopener noreferrer">Coords</a>
+                  <% } else { %>
+                    <span class="muted">-</span>
+                  <% } %>
+                </td>
+                <td><strong>Rs. <%= order.total %></strong></td>
+                <td><span class="status-pill <%= paymentClass(order.payment_status) %>"><%= order.payment_status %></span></td>
+                <td><%= order.payment_method || '-' %></td>
+                <td><%= order.order_source || '-' %></td>
+                <td>
+                  <% if (order.order_pdf_url) { %>
+                    <a class="btn btn-secondary btn-small-inline" href="<%= order.order_pdf_url %>" target="_blank" rel="noopener noreferrer">Open PDF</a>
+                  <% } else { %>
+                    <span class="muted">-</span>
+                  <% } %>
+                </td>
+                <td><span class="status-pill <%= orderClass(order.order_status) %>"><%= order.order_status %></span></td>
+                <td>
+                  <form action="/admin/update-order-status/<%= order.id %>" method="POST" class="form-actions compact-actions">
+                    <select name="order_status">
+                      <option value="Order Received" <%= order.order_status === 'Order Received' ? 'selected' : '' %>>Order Received</option>
+                      <option value="Packed" <%= order.order_status === 'Packed' ? 'selected' : '' %>>Packed</option>
+                      <option value="Shipped" <%= order.order_status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                      <option value="Delivered" <%= order.order_status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                    </select>
+                    <button type="submit" class="btn-small-inline">Save</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel table-wrap" id="products">
+        <h3>Product Management</h3>
+        <table class="admin-table product-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Discount</th>
+              <th>Category</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.forEach(product => { %>
+              <tr>
+                <td><%= product.id %></td>
+                <td>
+                  <% if (product.image) { %>
+                    <img src="/uploads/<%= product.image %>" class="table-thumb" alt="<%= product.name %>">
+                  <% } else { %>
+                    <span class="muted">No image</span>
+                  <% } %>
+                </td>
+                <td><%= product.name %></td>
+                <td>Rs. <%= product.price || product.selling_price %></td>
+                <td>
+                  <form action="/admin/product-discount/<%= product.id %>" method="POST" class="form-actions compact-actions">
+                    <input type="hidden" name="product_id" value="<%= product.id %>">
+                    <input type="number" name="discount_percent" min="0" max="95" step="0.01" value="<%= product.discount_percent || 0 %>" style="max-width:86px;">
+                    <button type="submit" name="action" value="apply" class="btn-small-inline uniform-admin-btn">Apply</button>
+                    <button type="submit" name="action" value="remove" class="btn-small-inline btn btn-secondary uniform-admin-btn">Remove</button>
+                  </form>
+                </td>
+                <td><%= product.category %></td>
+                <td>
+                  <button type="button" class="action-btn edit-btn uniform-admin-btn" data-open-modal="edit-product-modal-<%= product.id %>">Edit</button>
+                  <a class="action-btn delete-btn" href="/admin/delete/<%= product.id %>" onclick="return confirm('Delete this product?');">Delete</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel" id="whatsapp-status">
+        <h3>WhatsApp Auto-Send Status</h3>
+        <% if (safeWhatsAppStatus.configured) { %>
+          <p class="ok-status">Configured and ready. Admin Number: <%= safeWhatsAppStatus.number %></p>
+        <% } else { %>
+          <p class="warn-status">Not fully configured. Missing:</p>
+          <p class="muted"><%= safeWhatsAppStatus.missing.join(", ") %></p>
+        <% } %>
+      </section>
+    </main>
+  </div>
+
+  <div id="add-product-modal" class="modal-overlay hidden-modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Add Product</h3>
+        <button type="button" class="modal-close" data-close-modal="add-product-modal">x</button>
+      </div>
+      <form action="/admin/add-product" method="POST" enctype="multipart/form-data" class="stack admin-add-form">
+        <div class="grid-2">
+          <div><label>Product Name</label><input type="text" name="name" required></div>
+          <div><label>Category</label><input type="text" name="category" required></div>
+          <div><label>Brand Name</label><input type="text" name="brand_name" placeholder="e.g. Chakali Store"></div>
+          <div><label>Region of Origin</label><input type="text" name="region_of_origin" placeholder="e.g. India"></div>
+          <div><label>Net Quantity</label><input type="text" name="net_quantity" placeholder="e.g. 500 g"></div>
+          <div><label>Items Per Pack</label><input type="number" name="items_per_pack" min="1" value="1"></div>
+          <div><label>Item Part Number</label><input type="text" name="item_part_number" placeholder="e.g. CHK-500"></div>
+          <div><label>MRP (Optional)</label><input type="number" name="mrp" min="0" step="0.01" placeholder="e.g. 249"></div>
+        </div>
+        <div><label>Description</label><textarea name="description" required></textarea></div>
+        <div><label>Ingredients / Description</label><textarea name="ingredients" required></textarea></div>
+        <div><label>Offer Text (Optional)</label><textarea name="offer_text" placeholder="e.g. Cashback up to Rs.50 on selected UPI apps"></textarea></div>
+        <div class="grid-2 upload-grid">
+          <label class="upload-box"><span class="upload-icon">?</span><span>Main Chakli Image</span><input type="file" name="image" accept="image/*"></label>
+          <label class="upload-box"><span class="upload-icon">?</span><span>Brand Logo</span><input type="file" name="logo_image" accept="image/*"></label>
+          <label class="upload-box"><span class="upload-icon">?</span><span>Detail Images (Multiple)</span><input type="file" name="gallery_images" accept="image/*" multiple></label>
+        </div>
+        <div class="weight-price-grid">
+          <% safeWeightOptions.forEach(w => { %>
+            <div><label><%= w %>g Price</label><input type="number" name="weight_price_<%= w %>" min="0" step="0.01" required></div>
+          <% }) %>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn-small-inline">Add Product</button></div>
+      </form>
+    </div>
+  </div>
+
+  <% products.forEach(product => { %>
+    <% const wp = safeWeightPricesByProduct[product.id] || {}; %>
+    <div id="edit-product-modal-<%= product.id %>" class="modal-overlay hidden-modal">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Edit Product - <%= product.name %></h3>
+          <button type="button" class="modal-close" data-close-modal="edit-product-modal-<%= product.id %>">x</button>
+        </div>
+        <form action="/admin/update-product/<%= product.id %>" method="POST" enctype="multipart/form-data" class="stack admin-edit-form">
+          <div class="grid-2">
+            <input type="text" name="name" value="<%= product.name %>" required>
+            <input type="text" name="category" value="<%= product.category || '' %>" required>
+            <input type="text" name="brand_name" value="<%= product.brand_name || '' %>" placeholder="Brand name">
+            <input type="text" name="region_of_origin" value="<%= product.region_of_origin || '' %>" placeholder="Region of origin">
+            <input type="text" name="net_quantity" value="<%= product.net_quantity || '' %>" placeholder="Net quantity">
+            <input type="number" name="items_per_pack" value="<%= product.items_per_pack || 1 %>" min="1" placeholder="Items per pack">
+            <input type="text" name="item_part_number" value="<%= product.item_part_number || '' %>" placeholder="Item part number">
+            <input type="number" name="mrp" value="<%= product.mrp || '' %>" min="0" step="0.01" placeholder="MRP">
+            <input type="number" name="quantity_grams" value="<%= product.quantity_grams || 0 %>" min="1" required>
+            <input type="number" name="stock" value="<%= product.stock || 0 %>" min="0" required>
+            <input type="file" name="image" accept="image/*">
+            <input type="file" name="logo_image" accept="image/*">
+            <input type="file" name="gallery_images" accept="image/*" multiple>
+          </div>
+          <div class="weight-price-grid">
+            <% safeWeightOptions.forEach(w => { %>
+              <div><label><%= w %>g Price</label><input type="number" name="weight_price_<%= w %>" value="<%= wp[w] !== undefined ? wp[w] : '' %>" min="0" step="0.01" required></div>
+            <% }) %>
+          </div>
+          <textarea name="description" required><%= product.description || '' %></textarea>
+          <textarea name="ingredients" required><%= product.ingredients || '' %></textarea>
+          <textarea name="offer_text" placeholder="Offer text"><%= product.offer_text || '' %></textarea>
+          <div class="form-actions"><button type="submit" class="btn-small-inline">Update</button></div>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+
+  <% if (typeof adminWhatsAppNumber !== 'undefined' && adminWhatsAppNumber) { %>
+    <a
+      class="floating-whatsapp"
+      href="https://wa.me/<%= adminWhatsAppNumber %>?text=<%= encodeURIComponent('Hello Admin') %>"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.52 2 2.04 6.48 2.04 12c0 1.77.46 3.51 1.33 5.04L2 22l5.11-1.34A9.96 9.96 0 0 0 12.04 22C17.56 22 22.04 17.52 22.04 12S17.56 2 12.04 2zm0 18.2c-1.53 0-3.03-.4-4.34-1.16l-.31-.18-3.03.8.81-2.95-.2-.31a8.16 8.16 0 0 1-1.25-4.4 8.32 8.32 0 1 1 8.32 8.2zm4.56-6.12c-.25-.12-1.48-.73-1.71-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.98-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.25-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.1-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.41-.56-.42h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.25 1.05.4 1.41.52.59.19 1.12.16 1.54.1.47-.07 1.48-.6 1.69-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.29z"></path></svg>
+    </a>
+  <% } %>
+
+  <script>
+    (function () {
+      function openModal(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('hidden-modal');
+        document.body.classList.add('no-scroll');
+      }
+
+      function closeModal(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('hidden-modal');
+        if (!document.querySelector('.modal-overlay:not(.hidden-modal)')) {
+          document.body.classList.remove('no-scroll');
+        }
+      }
+
+      document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          openModal(btn.getAttribute('data-open-modal'));
+        });
+      });
+
+      document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          closeModal(btn.getAttribute('data-close-modal'));
+        });
+      });
+
+      document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) {
+            overlay.classList.add('hidden-modal');
+            if (!document.querySelector('.modal-overlay:not(.hidden-modal)')) {
+              document.body.classList.remove('no-scroll');
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll('.filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-target');
+          var filter = btn.getAttribute('data-filter');
+          var tbody = document.getElementById(targetId);
+          if (!tbody) return;
+
+          btn.parentElement.querySelectorAll('.filter-btn').forEach(function (x) { x.classList.remove('active'); });
+          btn.classList.add('active');
+
+          tbody.querySelectorAll('tr').forEach(function (row) {
+            var status = row.getAttribute('data-order-status') || '';
+            var show = filter === 'all' || status === filter;
+            row.style.display = show ? '' : 'none';
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Order Success</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="topbar">
+      <h1 class="brand">Order Confirmed</h1>
+      <div class="menu">
+        <a href="/shop">Shop</a>
+        <a href="/order-tracking?orderId=<%= order.id %>">Track Order</a>
+      </div>
+    </nav>
+
+    <section class="panel">
+      <h2>Thank you for your order!</h2>
+      <p>Order ID: <strong>#<%= order.id %></strong></p>
+      <p>Total: <strong>Rs. <%= order.total %></strong></p>
+      <p>Status: <strong><%= order.order_status %></strong></p>
+      <% if (notify === 'missing_config') { %>
+        <p class="warn-status">Order placed but WhatsApp auto-send is not configured on server.</p>
+      <% } else if (notify === 'failed') { %>
+        <p class="warn-status">Order placed but WhatsApp notification failed.</p>
+      <% } else { %>
+        <p class="ok-status">Admin notified automatically on WhatsApp.</p>
+      <% } %>
+      <div class="form-actions">
+        <a class="btn" href="/order-tracking?orderId=<%= order.id %>">Track Order</a>
+        <a class="btn btn-secondary" href="/shop">Continue Shopping</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

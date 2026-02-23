@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Product</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="topbar">
+      <h1 class="brand">Add New Product</h1>
+      <div class="menu">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/">Store</a>
+      </div>
+    </nav>
+
+    <section class="panel" style="margin-top:20px;">
+      <form action="/admin/add-product" method="POST" enctype="multipart/form-data" class="stack">
+        <div class="grid-2">
+          <div>
+            <label>Product Name</label>
+            <input type="text" name="name" required>
+          </div>
+          <div>
+            <label>Category</label>
+            <input type="text" name="category" required>
+          </div>
+          <div>
+            <label>Brand Name</label>
+            <input type="text" name="brand_name" placeholder="e.g. Chakali Store">
+          </div>
+          <div>
+            <label>Region of Origin</label>
+            <input type="text" name="region_of_origin" placeholder="e.g. India">
+          </div>
+          <div>
+            <label>Net Quantity</label>
+            <input type="text" name="net_quantity" placeholder="e.g. 500 g">
+          </div>
+          <div>
+            <label>Items Per Pack</label>
+            <input type="number" name="items_per_pack" min="1" value="1">
+          </div>
+          <div>
+            <label>Item Part Number</label>
+            <input type="text" name="item_part_number" placeholder="e.g. CHK-500">
+          </div>
+          <div>
+            <label>MRP (Optional)</label>
+            <input type="number" name="mrp" min="0" step="0.01" placeholder="e.g. 249">
+          </div>
+        </div>
+
+        <div>
+          <label>Description</label>
+          <textarea name="description" required></textarea>
+        </div>
+
+        <div>
+          <label>Ingredients / Description</label>
+          <textarea name="ingredients" required></textarea>
+        </div>
+
+        <div>
+          <label>Offer Text (Optional)</label>
+          <textarea name="offer_text" placeholder="e.g. Cashback up to Rs.50 on selected UPI apps"></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Main Chakli Image</label>
+            <input type="file" name="image" accept="image/*">
+          </div>
+          <div>
+            <label>Brand Logo</label>
+            <input type="file" name="logo_image" accept="image/*">
+          </div>
+          <div>
+            <label>Detail Images (Multiple)</label>
+            <input type="file" name="gallery_images" accept="image/*" multiple>
+          </div>
+        </div>
+
+        <div class="weight-price-grid">
+          <div>
+            <label>100g Price</label>
+            <input type="number" name="weight_price_100" min="0" step="0.01" required>
+          </div>
+          <div>
+            <label>250g Price</label>
+            <input type="number" name="weight_price_250" min="0" step="0.01" required>
+          </div>
+          <div>
+            <label>500g Price</label>
+            <input type="number" name="weight_price_500" min="0" step="0.01" required>
+          </div>
+          <div>
+            <label>750g Price</label>
+            <input type="number" name="weight_price_750" min="0" step="0.01" required>
+          </div>
+          <div>
+            <label>1000g Price</label>
+            <input type="number" name="weight_price_1000" min="0" step="0.01" required>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit">Add Product</button>
+          <a class="btn btn-secondary" href="/admin/dashboard">Back to Dashboard</a>
+        </div>
+      </form>
+    </section>
+  </div>
+  <% if (adminWhatsAppNumber) { %>
+    <a
+      class="floating-whatsapp"
+      href="https://wa.me/<%= adminWhatsAppNumber %>?text=<%= encodeURIComponent('Hello Admin') %>"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+    >WA</a>
+  <% } %>
+</body>
+</html>

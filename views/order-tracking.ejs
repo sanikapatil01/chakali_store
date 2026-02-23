@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Track Order</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container track-order-page">
+    <nav class="topbar">
+      <h1 class="brand">Order Tracking</h1>
+      <div class="menu">
+        <a href="/shop">Shop</a>
+        <a href="/cart">Cart</a>
+      </div>
+    </nav>
+
+    <section class="panel">
+      <form method="GET" action="/order-tracking" class="form-actions">
+        <input type="number" name="orderId" placeholder="Enter Order ID" required>
+        <button type="submit">Track</button>
+      </form>
+    </section>
+
+    <% if (order) { %>
+      <section class="panel">
+        <%
+          const steps = ["Order Received", "Packed", "Shipped", "Delivered"];
+          const currentIndex = Math.max(0, steps.indexOf(order.order_status));
+        %>
+        <h2>Order #<%= order.id %></h2>
+        <p>Customer: <%= order.customer_name %></p>
+        <p>Phone: <%= order.phone %></p>
+        <p>Address: <%= order.address %></p>
+        <p>Total: Rs. <%= order.total %></p>
+        <p>Payment: <%= order.payment_status %></p>
+        <p>Payment Method: <%= order.payment_method === "cod" ? "Cash on Delivery" : "Online" %></p>
+        <p>Order Source: <%= order.order_source || "website" %></p>
+        <% if (order.live_location_url) { %>
+          <p>Live Location: <a href="<%= order.live_location_url %>" target="_blank" rel="noopener noreferrer">View on Map</a></p>
+        <% } else if (order.live_latitude && order.live_longitude) { %>
+          <p>Live Location: <a href="https://maps.google.com/?q=<%= order.live_latitude %>,<%= order.live_longitude %>" target="_blank" rel="noopener noreferrer">View Coordinates</a></p>
+        <% } %>
+
+        <div class="tracking-steps flipkart-track">
+          <% steps.forEach(function(step, idx){ %>
+            <div class="track-item <%= idx <= currentIndex ? 'active' : '' %>">
+              <div class="track-dot"><%= idx < currentIndex ? "✓" : (idx + 1) %></div>
+              <div class="track-label"><%= step %></div>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+
+      <section class="panel table-wrap">
+        <h3>Order Items</h3>
+        <% if (orderItems && orderItems.length > 0) { %>
+          <table>
+            <tr>
+              <th>Product</th>
+              <th>Weight</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Line Total</th>
+            </tr>
+            <% orderItems.forEach(function(item) { %>
+              <tr>
+                <td><%= item.product_name %></td>
+                <td><%= item.weight_option || "250g" %></td>
+                <td><%= item.quantity %></td>
+                <td>Rs. <%= item.unit_price %></td>
+                <td>Rs. <%= item.line_total %></td>
+              </tr>
+            <% }) %>
+          </table>
+        <% } else { %>
+          <p class="muted">No item details found for this order.</p>
+        <% } %>
+      </section>
+    <% } %>
+  </div>
+</body>
+</html>

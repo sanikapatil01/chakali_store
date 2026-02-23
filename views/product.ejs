@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= product.name %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="topbar">
+      <h1 class="brand">Chakali Store</h1>
+      <div class="menu">
+        <a href="/shop">Shop</a>
+        <a href="/cart">Cart</a>
+        <a href="/order-tracking">Track Order</a>
+      </div>
+    </nav>
+
+    <%
+      const discountPercent = Math.max(0, Math.min(95, Number(product.discount_percent || 0)));
+      const basePrice = Number(product.price || product.selling_price || 0);
+      const fallbackMap = {100: Math.round(basePrice * 0.45), 250: basePrice, 500: Math.round(basePrice * 1.9), 750: Math.round(basePrice * 2.8), 1000: Math.round(basePrice * 3.6)};
+      const configured = {};
+      (weightPrices || []).forEach(function (wp) { configured[wp.grams] = Number(wp.price); });
+      const originalMap = {};
+      const finalMap = {};
+      (weightOptions || [100, 250, 500, 750, 1000]).forEach(function (g) {
+        const original = configured[g] !== undefined ? configured[g] : fallbackMap[g];
+        originalMap[g] = original;
+        finalMap[g] = discountPercent > 0 ? Math.round(original * (1 - discountPercent / 100)) : original;
+      });
+      const defaultWeight = (weightOptions || [100, 250, 500, 750, 1000])[1] || (weightOptions || [100, 250, 500, 750, 1000])[0];
+      const primaryImage = product.image || (galleryImages && galleryImages[0]) || "";
+      const allImages = [];
+      if (primaryImage) allImages.push(primaryImage);
+      (galleryImages || []).forEach(function (img) {
+        if (img && allImages.indexOf(img) === -1) allImages.push(img);
+      });
+      const avgRatingRounded = Math.round(Number(ratingSummary.avg_rating || 0));
+      const adminWaNumber = String(adminWhatsAppNumber || "").replace(/[^\d]/g, "");
+      const productBrand = product.brand_name || "Chakali Store";
+      const productOffer = String(product.offer_text || "").trim();
+      const productOrigin = product.region_of_origin || "India";
+      const productNetQty = product.net_quantity || (String(defaultWeight) + " g");
+      const productItemsPerPack = Number(product.items_per_pack || 1);
+      const productPartNumber = product.item_part_number || ("SKU-" + product.id);
+
+      const ratingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      (reviews || []).forEach(function (r) {
+        const rv = Number(r.rating || 0);
+        if (ratingBreakdown[rv] !== undefined) ratingBreakdown[rv] += 1;
+      });
+      const totalRatingCount = Number(ratingSummary.total_reviews || 0);
+
+      function stars(value) {
+        const safe = Math.max(0, Math.min(5, Number(value || 0)));
+        return "*****".slice(0, safe) + ".....".slice(0, 5 - safe);
+      }
+    %>
+
+    <section class="panel product-v2">
+      <div class="product-v2-left">
+        <div class="image-stack">
+          <% if (allImages.length > 0) { %>
+            <img id="mainProductImage" src="/uploads/<%= allImages[0] %>" alt="<%= product.name %>">
+          <% } else { %>
+            <div class="image-box">No Image</div>
+          <% } %>
+        </div>
+        <% if (allImages.length > 1) { %>
+          <div class="gallery-row product-v2-thumbs">
+            <% allImages.forEach(function (img) { %>
+              <img class="gallery-thumb" src="/uploads/<%= img %>" alt="Gallery" onclick="document.getElementById('mainProductImage').src='/uploads/<%= img %>'">
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="product-v2-middle">
+        <p class="muted">Snacks > Indian Namkeen > Chakali</p>
+        <h2 class="product-title"><%= product.name %></h2>
+        <p class="muted">Brand: <strong><%= productBrand %></strong></p>
+        <p class="muted"><strong><%= stars(avgRatingRounded) %></strong> <%= Number(ratingSummary.avg_rating || 0).toFixed(1) %> out of 5 (<%= ratingSummary.total_reviews %> ratings)</p>
+
+        <div class="product-price-block">
+          <% if (discountPercent > 0) { %>
+            <span class="discount-big"><%= discountPercent %>% OFF</span>
+          <% } %>
+          <span class="price-big">Rs. <span id="dynamicPrice"><%= finalMap[defaultWeight] %></span></span>
+          <p class="muted">M.R.P: Rs. <span id="dynamicMrp"><%= product.mrp ? Number(product.mrp) : originalMap[defaultWeight] %></span> (inclusive of all taxes)</p>
+          <% if (productOffer) { %>
+            <div class="offer-box">
+              <strong>Offer:</strong> <%= productOffer %>
+            </div>
+          <% } %>
+        </div>
+
+        <div class="panel">
+          <h3>Item Weight Options</h3>
+          <div class="radio-group">
+            <% (weightOptions || [100,250,500,750,1000]).forEach(function (grams) { %>
+              <label class="radio-pill">
+                <input
+                  type="radio"
+                  name="weight"
+                  value="<%= grams %>g"
+                  data-price="<%= finalMap[grams] %>"
+                  data-mrp="<%= product.mrp ? Number(product.mrp) : originalMap[grams] %>"
+                  <%= grams === defaultWeight ? "checked" : "" %>
+                >
+                <%= grams %>g
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Product Information</h3>
+          <table class="product-info-table">
+            <tr><td>Item Name</td><td><%= product.name %></td></tr>
+            <tr><td>Brand Name</td><td><%= productBrand %></td></tr>
+            <tr><td>Item Part Number</td><td><%= productPartNumber %></td></tr>
+            <tr><td>Number of Items</td><td><%= productItemsPerPack %></td></tr>
+            <tr><td>Region of Origin</td><td><%= productOrigin %></td></tr>
+            <tr><td>Net Quantity</td><td><%= productNetQty %></td></tr>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>Important Information</h3>
+          <p><strong>Ingredients:</strong> <%= product.ingredients || "Rice flour, spices, edible oil" %></p>
+          <p><strong>Description:</strong> <%= product.description || "Fresh homemade chakali made in hygienic conditions." %></p>
+        </div>
+      </div>
+
+      <aside class="product-v2-right">
+        <div class="panel buy-card">
+          <% if (product.logo_image) { %>
+            <div class="brand-logo-wrap">
+              <img src="/uploads/<%= product.logo_image %>" alt="Brand Logo" class="brand-logo-image">
+            </div>
+          <% } %>
+
+          <p class="price-tag">Current Price: Rs. <span id="quickPriceText"><%= finalMap[defaultWeight] %></span></p>
+
+          <form action="/add-to-cart" method="POST" class="stack" id="quickAddForm">
+            <input type="hidden" name="productId" value="<%= product.id %>">
+            <input type="hidden" name="unitPrice" id="quickCartPrice" value="<%= finalMap[defaultWeight] %>">
+            <input type="hidden" name="weightOption" id="quickCartWeight" value="<%= defaultWeight %>g">
+            <label>Quantity</label>
+            <input type="number" name="quantity" id="quickCartQty" value="1" min="1" required>
+            <button type="submit" class="btn btn-secondary cta-match-btn">Add to Cart</button>
+          </form>
+
+          <hr>
+
+          <form class="stack" id="whatsappOrderForm" action="/place-single-order" method="POST">
+            <h3>Order via WhatsApp</h3>
+            <input type="hidden" name="productId" value="<%= product.id %>">
+            <input type="hidden" name="unitPrice" id="waUnitPrice" value="<%= finalMap[defaultWeight] %>">
+            <input type="hidden" name="weightOption" id="waWeightOption" value="<%= defaultWeight %>g">
+            <input type="hidden" name="payment_method" value="cod">
+            <input type="hidden" name="order_source" value="whatsapp">
+            <label>Quantity</label>
+            <input type="number" name="quantity" id="waQty" value="1" min="1" required>
+            <label>Name</label>
+            <input type="text" name="name" id="waName" required>
+            <label>Phone</label>
+            <input type="text" name="phone" id="waPhone" required>
+            <label>Address</label>
+            <textarea name="address" id="waAddress" required></textarea>
+            <label>Live Location (Optional)</label>
+            <div class="form-actions">
+              <button type="button" id="productDetectLocation">Use Live Location</button>
+            </div>
+            <input type="hidden" id="productLiveLatitude" name="live_latitude">
+            <input type="hidden" id="productLiveLongitude" name="live_longitude">
+            <input type="text" id="productLiveLocationUrl" name="live_location_url" placeholder="Location link auto-filled or paste Google Maps URL">
+            <p class="muted" id="productLocationStatus"></p>
+            <% if (adminWaNumber) { %>
+              <button type="submit" class="btn btn-whatsapp cta-match-btn" id="whatsappPlaceBtn">Order via WhatsApp</button>
+            <% } else { %>
+              <p class="warn-status">Admin WhatsApp number is not configured.</p>
+            <% } %>
+          </form>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel review-v2">
+      <div class="review-v2-left">
+        <h3>Customer Reviews</h3>
+        <p><strong><%= stars(avgRatingRounded) %></strong> <%= Number(ratingSummary.avg_rating || 0).toFixed(1) %> out of 5</p>
+        <p class="muted"><%= totalRatingCount %> global ratings</p>
+        <% [5,4,3,2,1].forEach(function (star) {
+             const count = ratingBreakdown[star] || 0;
+             const percent = totalRatingCount > 0 ? Math.round((count / totalRatingCount) * 100) : 0;
+        %>
+          <div class="rating-row">
+            <span><%= star %> star</span>
+            <div class="rating-bar"><span style="width:<%= percent %>%;"></span></div>
+            <span><%= percent %>%</span>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="review-v2-right">
+        <h3>Top Reviews</h3>
+        <% if (reviews && reviews.length > 0) { %>
+          <div class="review-grid review-list">
+            <% reviews.forEach(function (review) { %>
+              <article class="review-card">
+                <strong><%= review.customer_name %></strong>
+                <p><%= stars(review.rating) %></p>
+                <p class="muted">Reviewed on <%= new Date(review.created_at).toDateString() %></p>
+                <p><%= review.comment || "Great product." %></p>
+              </article>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="muted">No reviews yet. Be the first to rate.</p>
+        <% } %>
+
+        <form action="/product/<%= product.id %>/review" method="POST" class="stack" style="margin-top:14px;">
+          <h4>Write a Product Review</h4>
+          <div class="grid-2">
+            <input type="text" name="customer_name" placeholder="Your name" required>
+            <select name="rating" required>
+              <option value="5">5 - Excellent</option>
+              <option value="4">4 - Very Good</option>
+              <option value="3">3 - Good</option>
+              <option value="2">2 - Average</option>
+              <option value="1">1 - Poor</option>
+            </select>
+          </div>
+          <textarea name="comment" placeholder="Write your review"></textarea>
+          <button type="submit">Submit Review</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const dynamicPrice = document.getElementById("dynamicPrice");
+      const dynamicMrp = document.getElementById("dynamicMrp");
+      const quickPriceText = document.getElementById("quickPriceText");
+      const quickCartPrice = document.getElementById("quickCartPrice");
+      const quickCartWeight = document.getElementById("quickCartWeight");
+      const quickCartQty = document.getElementById("quickCartQty");
+      const whatsappOrderForm = document.getElementById("whatsappOrderForm");
+      const waQty = document.getElementById("waQty");
+      const waName = document.getElementById("waName");
+      const waPhone = document.getElementById("waPhone");
+      const waAddress = document.getElementById("waAddress");
+      const waUnitPrice = document.getElementById("waUnitPrice");
+      const waWeightOption = document.getElementById("waWeightOption");
+      const whatsappPlaceBtn = document.getElementById("whatsappPlaceBtn");
+      const productDetectLocation = document.getElementById("productDetectLocation");
+      const productLiveLatitude = document.getElementById("productLiveLatitude");
+      const productLiveLongitude = document.getElementById("productLiveLongitude");
+      const productLiveLocationUrl = document.getElementById("productLiveLocationUrl");
+      const productLocationStatus = document.getElementById("productLocationStatus");
+
+      function getSelectedWeight() {
+        return document.querySelector('input[name="weight"]:checked');
+      }
+
+      function refreshPrice() {
+        const selected = getSelectedWeight();
+        const price = Number(selected.dataset.price || 0);
+        const mrp = Number(selected.dataset.mrp || 0);
+        dynamicPrice.textContent = String(price);
+        dynamicMrp.textContent = String(mrp);
+        quickPriceText.textContent = String(price);
+        quickCartPrice.value = String(price);
+        quickCartWeight.value = selected.value;
+        if (waUnitPrice) waUnitPrice.value = String(price);
+        if (waWeightOption) waWeightOption.value = selected.value;
+      }
+
+      document.querySelectorAll('input[name="weight"]').forEach(function (el) {
+        el.addEventListener("change", function () {
+          refreshPrice();
+        });
+      });
+
+      if (quickCartQty && waQty) {
+        quickCartQty.addEventListener("input", function () {
+          if (!waQty.value || waQty.value === "1") {
+            waQty.value = quickCartQty.value || "1";
+          }
+        });
+      }
+
+      if (whatsappOrderForm && whatsappPlaceBtn) {
+        whatsappOrderForm.addEventListener("submit", function (e) {
+          if (!waName.value.trim() || !waPhone.value.trim() || !waAddress.value.trim()) {
+            e.preventDefault();
+            productLocationStatus.textContent = "Please fill name, phone and address before ordering.";
+          }
+        });
+      }
+
+      if (productDetectLocation) {
+        productDetectLocation.addEventListener("click", function () {
+          if (!navigator.geolocation) {
+            productLocationStatus.textContent = "Geolocation is not supported on this device.";
+            return;
+          }
+          productLocationStatus.textContent = "Fetching location...";
+          navigator.geolocation.getCurrentPosition(function (position) {
+            const latitude = position.coords.latitude.toFixed(7);
+            const longitude = position.coords.longitude.toFixed(7);
+            productLiveLatitude.value = latitude;
+            productLiveLongitude.value = longitude;
+            productLiveLocationUrl.value = "https://maps.google.com/?q=" + latitude + "," + longitude;
+            productLocationStatus.textContent = "Live location captured.";
+          }, function () {
+            productLocationStatus.textContent = "Unable to get live location. You can paste map link manually.";
+          }, { enableHighAccuracy: true, timeout: 10000 });
+        });
+      }
+
+      refreshPrice();
+    })();
+  </script>
+
+  <% if (adminWaNumber) { %>
+    <a
+      class="floating-whatsapp"
+      href="https://wa.me/<%= adminWaNumber %>?text=<%= encodeURIComponent('Hello, I want details for ' + product.name) %>"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.52 2 2.04 6.48 2.04 12c0 1.77.46 3.51 1.33 5.04L2 22l5.11-1.34A9.96 9.96 0 0 0 12.04 22C17.56 22 22.04 17.52 22.04 12S17.56 2 12.04 2zm0 18.2c-1.53 0-3.03-.4-4.34-1.16l-.31-.18-3.03.8.81-2.95-.2-.31a8.16 8.16 0 0 1-1.25-4.4 8.32 8.32 0 1 1 8.32 8.2zm4.56-6.12c-.25-.12-1.48-.73-1.71-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.98-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.25-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.1-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.41-.56-.42h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.25 1.05.4 1.41.52.59.19 1.12.16 1.54.1.47-.07 1.48-.6 1.69-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.29z"></path></svg>
+    </a>
+  <% } %>
+</body>
+</html>
