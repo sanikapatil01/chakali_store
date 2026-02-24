@@ -5,8 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <div class="container">
+<body class="splash-active">
+  <div class="splash-screen" id="splashScreen" role="status" aria-live="polite">
+    <div class="splash-center">
+      <div class="splash-logo"><span>C</span></div>
+      <p class="splash-brand">Chakali Store</p>
+    </div>
+  </div>
+
+  <div class="container main-content" id="mainContent">
     <nav class="topbar">
       <div class="logo-side">
         <div class="chakali-logo"><span>C</span></div>
@@ -103,12 +110,12 @@
         <h4>Quick Links</h4>
         <a href="/shop">Shop</a>
         <a href="#about">About Us</a>
-        <a href="#contact">Contact</a>
+        <a href="#contact">Contact Us</a>
       </div>
 
       <div class="footer-block">
         <h4>Contact Us</h4>
-        <p><%= adminWhatsAppNumber || '+91 1234567890' %></p>
+        <p><%= adminWhatsAppNumber || '+91 9860474713' %></p>
         <p>Order via WhatsApp for quick service</p>
       </div>
 
@@ -128,6 +135,31 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.52 2 2.04 6.48 2.04 12c0 1.77.46 3.51 1.33 5.04L2 22l5.11-1.34A9.96 9.96 0 0 0 12.04 22C17.56 22 22.04 17.52 22.04 12S17.56 2 12.04 2zm0 18.2c-1.53 0-3.03-.4-4.34-1.16l-.31-.18-3.03.8.81-2.95-.2-.31a8.16 8.16 0 0 1-1.25-4.4 8.32 8.32 0 1 1 8.32 8.2zm4.56-6.12c-.25-.12-1.48-.73-1.71-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.98-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.25-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.1-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.41-.56-.42h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.25 1.05.4 1.41.52.59.19 1.12.16 1.54.1.47-.07 1.48-.6 1.69-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.29z"></path></svg>
     </a>
   <% } %>
+
+  <script>
+    (function () {
+      var splashScreen = document.getElementById("splashScreen");
+      var bodyEl = document.body;
+      if (!splashScreen || !bodyEl) return;
+
+      var closed = false;
+      var minimumDisplayMs = 5000;
+      var absoluteMaxMs = 10000;
+
+      function closeSplash() {
+        if (closed) return;
+        closed = true;
+        bodyEl.classList.remove("splash-active");
+        splashScreen.classList.add("hidden");
+      }
+
+      window.addEventListener("load", function () {
+        setTimeout(closeSplash, minimumDisplayMs);
+      });
+
+      setTimeout(closeSplash, absoluteMaxMs);
+    })();
+  </script>
 
   <script>
     (function () {
